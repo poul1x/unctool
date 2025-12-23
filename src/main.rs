@@ -170,6 +170,10 @@ struct CmdConvert {
     path_type: PathType,
 }
 
+fn print_error(err_msg: String) {
+    eprintln!("[Error] {}", err_msg);
+}
+
 fn main() {
     let unctool: CmdUncTool = argh::from_env();
     match unctool.subcommand {
@@ -182,7 +186,7 @@ fn main() {
                     exit(0);
                 }
                 Err(e) => {
-                    eprintln!("[Error] {}", e.to_string());
+                    print_error(e.to_string());
                     exit(1);
                 }
             }
@@ -195,7 +199,7 @@ fn main() {
                     exit(0);
                 }
                 Err(e) => {
-                    eprintln!("[Error] {}", e.to_string());
+                    print_error(e.to_string());
                     exit(1);
                 }
             }
@@ -205,14 +209,14 @@ fn main() {
             let path_type = cmd_remote_path.path_type;
 
             if !Path::new(&path).exists() {
-                eprintln!("[Error] Path does not exist or access denied: '{path}'");
+                print_error(format!("Path does not exist or access denied: '{path}'"));
                 exit(1);
             }
 
             let abs_path = match abspath(&path) {
                 Some(res) => res,
                 None => {
-                    eprintln!("[Error] Failed to get an absolute path for '{path}'");
+                    print_error(format!("Failed to get an absolute path for '{path}'"));
                     exit(1);
                 }
             };
@@ -223,7 +227,7 @@ fn main() {
                     exit(0);
                 }
                 Err(e) => {
-                    eprintln!("[Error] {}", e.to_string());
+                    print_error(e.to_string());
                     exit(1);
                 }
             }
