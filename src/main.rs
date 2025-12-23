@@ -120,7 +120,8 @@ fn abspath(p: &str) -> Option<String> {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// unctool - UNC path <-> local path converter tool
+/// UNC Tool - Seamlessly convert between Linux and Windows UNC paths.
+/// Convert local Linux path to Windows/Linux UNC and vice versa.
 struct CmdUncTool {
     #[argh(subcommand)]
     subcommand: CmdUncToolSub,
