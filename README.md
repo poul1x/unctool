@@ -2,6 +2,10 @@
 
 Seamlessly convert between Linux and Windows UNC paths. Convert local Linux path to Windows/Linux UNC and vice versa.
 
+TODO: update build instructions
+cargo test -p unctool
+cargo run -p unctool-cli
+
 ## Usage
 
 Convert between Linux and Windows UNC:
