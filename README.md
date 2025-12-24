@@ -73,11 +73,11 @@ cd unctool
 rustup target add x86_64-unknown-linux-musl
 cargo build --release --target x86_64-unknown-linux-musl
 
-cp ./target/x86_64-unknown-linux-musl/release/unctool unctool
-strip --strip-all ./unctool
+cp ./target/x86_64-unknown-linux-musl/release/unctool-cli unctool-cli
+strip --strip-all ./unctool-cli
 
 # Test run
-./unctool --help
+./unctool-cli --help
 ```
 
 ### Linux 32-bit:
@@ -89,9 +89,9 @@ cd unctool
 rustup target add i686-unknown-linux-musl
 cargo build --release --target i686-unknown-linux-musl
 
-cp ./target/i686-unknown-linux-musl/release/unctool unctool
-strip --strip-all ./unctool
+cp ./target/i686-unknown-linux-musl/release/unctool-cli unctool-cli
+strip --strip-all ./unctool-cli
 
 # Test run
-./unctool --help
+./unctool-cli --help
 ```
