@@ -2,6 +2,8 @@
 name = "unctool-cli"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
+descritpion = "A CLI tool to convert between Linux and Windows UNC paths. Convert local Linux path to Windows/Linux UNC and vice versa."
 
 [dependencies]
 argh = "0.1.13"
