@@ -67,6 +67,7 @@ impl FromArgValue for PathType {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
+#[argh(help_triggers("-h", "--help", "help"))]
 /// UNC Tool - Seamlessly convert between Linux and Windows UNC paths.
 /// Convert local Linux path to Windows/Linux UNC and vice versa.
 struct CmdUncTool {
@@ -80,7 +81,13 @@ enum CmdUncToolSub {
     LocalPath(CmdLocalPath),
     RemotePath(CmdRemotePath),
     Convert(CmdConvert),
+    Version(CmdVersion),
 }
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Show current version and exit
+#[argh(subcommand, name = "version")]
+struct CmdVersion {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Convert remote Windows/Linux UNC path to local Linux filesystem path
@@ -130,6 +137,11 @@ fn abspath(p: &str) -> Option<String> {
 fn main() {
     let unctool: CmdUncTool = argh::from_env();
     match unctool.subcommand {
+        CmdUncToolSub::Version(_) => {
+            println!("unctool-cli {}", env!("CARGO_PKG_VERSION"));
+            println!("unctool {}", unctool::version());
+            exit(0);
+        }
         CmdUncToolSub::Convert(cmd_convert) => {
             let path = cmd_convert.path;
             let path_type = cmd_convert.path_type;

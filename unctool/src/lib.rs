@@ -143,6 +143,11 @@ pub fn remote_path(path: &str, path_type: PathType) -> Result<String> {
     Ok(intermediate_path_to_remote(&im_path, path_type))
 }
 
+/// Get unctool library version
+pub fn version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
