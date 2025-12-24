@@ -9,4 +9,4 @@ repository = "https://github.com/poul1x/unctool"
 [dependencies]
 argh = "0.1.13"
 shellexpand = "3.1.1"
-unctool = { path = "../unctool" }
+unctool = { path = "../unctool", version = "0.1.0" }
