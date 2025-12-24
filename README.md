@@ -5,6 +5,7 @@ Seamlessly convert between Linux and Windows UNC paths. Convert local Linux path
 TODO: update build instructions
 cargo test -p unctool
 cargo run -p unctool-cli
+cargo doc --open -p unctool
 
 ## Usage
 
