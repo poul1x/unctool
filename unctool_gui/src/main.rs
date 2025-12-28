@@ -1,207 +1,207 @@
-use iced::Alignment::Center;
-use iced::Element;
-use iced::Length::Fill;
-use iced::Length::Shrink;
-use iced::Task;
-use iced::widget::button;
-use iced::widget::row;
-use iced::widget::{column, pick_list, scrollable, space, text_input};
-use iced::window;
+//! # [unctool-cli](https://github.com/poul1x/unctool)
+//!
+//! A CLI tool to seamlessly convert between Linux and Windows UNC paths.
+//! It can convert local Linux path to Windows/Linux UNC and vice versa.
+//!
+//! # Usage
+//!
+//! Convert between Linux and Windows UNC:
+//!
+//! ```bash
+//! unctool convert 'smb://mynas.local/some/path' -t windows
+//! # \\mynas.local\some\path
+//!
+//! unctool convert '\\mynas.local\some\path' -t linux
+//! # smb://mynas.local/some/path
+//! ```
+//!
+//! Convert to remote UNC:
+//!
+//! ```bash
+//! unctool remote-path /mnt/mynas.local/some/path -t windows
+//! # \\mynas.local\some\path
+//!
+//! unctool remote-path /mnt/mynas.local/some/path -t linux
+//! # smb://mynas.local/some/path
+//! ```
+//!
+//! Convert from remote UNC:
+//!
+//! ```bash
+//! unctool local-path '\\mynas.local\some\path'
+//! # /mnt/mynas.local/some/path
+//!
+//! unctool local-path 'smb://mynas.local/some/path'
+//! # /mnt/mynas.local/some/path
+//! ```
 
-pub fn main() -> iced::Result {
-    iced::application(App::new, App::update, App::view)
-        .title(App::title)
-        .window_size((400.0, 200.0))
-        .run()
-}
+use argh::{FromArgValue, FromArgs};
+use std::path::Path;
+use std::process::exit;
 
-#[derive(Default)]
-struct App {
-    target_os: Option<TargetOS>,
-    command: Option<CommandName>,
-    path: String,
-}
+use unctool;
+mod gui_pre;
+mod gui_post;
 
-// #[derive(Debug, Default)]
-// struct AppState {
-//     input_value: String,
-// }
-
-#[derive(Debug, Clone)]
-enum Message {
-    TargetOsChanged(TargetOS),
-    CommandChanged(CommandName),
-    PathChanged(String),
-    OnSubmit,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TargetOS {
-    #[default]
+#[derive(Debug, PartialEq)]
+pub enum PathType {
     Windows,
     Linux,
 }
 
-impl std::fmt::Display for TargetOS {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                TargetOS::Windows => "Windows",
-                TargetOS::Linux => "Linux",
-            }
-        )
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum CommandName {
-    #[default]
-    Convert,
-    LocalPath,
-    RemotePath,
-}
-
-impl std::fmt::Display for CommandName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CommandName::Convert => "Linux UNC <-> Windows UNC",
-                CommandName::LocalPath => "Windows/Linux UNC -> Local path",
-                CommandName::RemotePath => "Local path -> Windows/Linux UNC",
-            }
-        )
-    }
-}
-
-impl App {
-    fn title(&self) -> String {
-        String::from("UNCTool")
-    }
-
-    fn new() -> (Self, Task<Message>) {
-        (
-            App {
-                target_os: Some(TargetOS::Windows),
-                command: Some(CommandName::Convert),
-                path: String::new(),
-            },
-            Task::default(),
-        )
-    }
-
-    fn view(&self) -> Element<'_, Message> {
-        let commands = [
-            CommandName::Convert,
-            CommandName::LocalPath,
-            CommandName::LocalPath,
-        ];
-
-        let pick_list_commands = pick_list(commands, self.command, Message::CommandChanged)
-            .placeholder("Choose command");
-
-        let targets = [TargetOS::Windows, TargetOS::Linux];
-
-        let pick_list_targets = pick_list(targets, self.target_os, Message::TargetOsChanged)
-            .placeholder("Choose target OS");
-
-        // let text = text_input("aaa", "bbb").on_input(Message::PathChanged);
-        // .placeholder("Enter path");
-
-        let input = text_input("Enter UNC or filesystem path", &self.path)
-            .on_input(Message::PathChanged)
-            .on_submit(Message::OnSubmit)
-            .padding(15)
-            .size(30)
-            .align_x(Center);
-
-        let btn_sumbit = button("Submit")
-            .on_press(Message::OnSubmit)
-            .padding(10)
-            .style(button::primary);
-
-        let btn_cancel = button("Cancel")
-            .on_press(Message::OnSubmit)
-            .padding(10)
-            .style(button::secondary);
-
-        let row1 = row!["Command", pick_list_commands]
-            .width(Fill)
-            .height(Fill)
-            .align_y(Center)
-            .spacing(10);
-
-        let row2 = row!["Target OS", pick_list_targets]
-            .width(Fill)
-            .height(Fill)
-            .align_y(Center)
-            .spacing(10);
-
-        let row3 = row![input]
-            .width(Fill)
-            .height(Fill)
-            .align_y(Center)
-            .spacing(10);
-
-        let row4 = row![btn_sumbit, btn_cancel]
-            .width(Fill)
-            .height(Fill)
-            .align_y(Center)
-            .spacing(10);
-
-        // let row2 = row!["Target OS", pick_list_targets]
-        //     .width(Fill)
-        //     .height(Fill)
-        //     .align_y(Center)
-        //     .spacing(10);
-
-        let content = column![row1, row2, row3, row4].spacing(10);
-
-        content.into()
-    }
-
-    fn update(&mut self, message: Message) {
-        match message {
-            Message::TargetOsChanged(val) => {
-                self.target_os = Some(val);
-            }
-            Message::CommandChanged(val) => {
-                self.command = Some(val);
-            }
-            Message::PathChanged(val) => self.path = val,
-            Message::OnSubmit => {
-                println!("On submit")
-            }
+impl From<PathType> for unctool::PathType {
+    fn from(value: PathType) -> Self {
+        match value {
+            PathType::Windows => unctool::PathType::Windows,
+            PathType::Linux => unctool::PathType::Linux,
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use iced_test::{Error, simulator};
-
-    #[test]
-    fn it_counts() -> Result<(), Error> {
-        let mut counter = Counter { value: 0 };
-        let mut ui = simulator(counter.view());
-
-        let _ = ui.click("Increment")?;
-        let _ = ui.click("Increment")?;
-        let _ = ui.click("Decrement")?;
-
-        for message in ui.into_messages() {
-            counter.update(message);
+impl FromArgValue for PathType {
+    fn from_arg_value(value: &str) -> std::result::Result<Self, String> {
+        match value.to_lowercase().as_str() {
+            "windows" => Ok(PathType::Windows),
+            "linux" => Ok(PathType::Linux),
+            _ => Err("Path type must be 'windows' or 'linux'".into()),
         }
-
-        assert_eq!(counter.value, 1);
-
-        let mut ui = simulator(counter.view());
-        assert!(ui.find("1").is_ok(), "Counter should display 1!");
-
-        Ok(())
     }
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(help_triggers("-h", "--help", "help"))]
+/// UNC Tool - Seamlessly convert between Linux and Windows UNC paths.
+/// Convert local Linux path to Windows/Linux UNC and vice versa.
+struct CmdUncTool {
+    #[argh(subcommand)]
+    subcommand: Option<CmdUncToolSub>,
+    #[argh(option, default="1.0")]
+	/// aaa !!!!!!!!
+    ui_scale: u32,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+enum CmdUncToolSub {
+    LocalPath(CmdLocalPath),
+    RemotePath(CmdRemotePath),
+    Convert(CmdConvert),
+    Version(CmdVersion),
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Show current version and exit
+#[argh(subcommand, name = "version")]
+struct CmdVersion {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Convert remote Windows/Linux UNC path to local Linux filesystem path
+#[argh(subcommand, name = "local-path")]
+struct CmdLocalPath {
+    #[argh(positional)]
+    /// remote UNC path in \\windows-share\path or smb://linux-share/path format
+    remote_path: String,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Convert local Linux filesystem path to remote Windows/Linux UNC path
+#[argh(subcommand, name = "remote-path")]
+struct CmdRemotePath {
+    #[argh(positional)]
+    /// local Linux filesystem path
+    local_path: String,
+
+    #[argh(option, short = 't')]
+    /// destination UNC path type: windows or linux
+    path_type: PathType,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Convert src UNC path to dst UNC path
+#[argh(subcommand, name = "convert")]
+struct CmdConvert {
+    #[argh(positional)]
+    /// remote UNC path in \\windows-share\path or smb://linux-share/path format
+    path: String,
+
+    #[argh(option, short = 't')]
+    /// destination UNC path type: windows or linux
+    path_type: PathType,
+}
+
+fn print_error(path: String, err_msg: String) {
+    eprintln!("[Error] Failed to process '{}': {}", path, err_msg);
+}
+
+fn abspath(p: &str) -> Option<String> {
+    let expanded_path = shellexpand::full(p).ok()?;
+    let canonical_path = std::fs::canonicalize(expanded_path.as_ref()).ok()?;
+    canonical_path.into_os_string().into_string().ok()
+}
+
+fn main() {
+    let unctool: CmdUncTool = argh::from_env();
+	gui_post::show();
+    // match unctool.subcommand {
+    //     CmdUncToolSub::Version(_) => {
+    //         println!("unctool-cli {}", env!("CARGO_PKG_VERSION"));
+    //         println!("unctool {}", unctool::version());
+    //         exit(0);
+    //     }
+    //     CmdUncToolSub::Convert(cmd_convert) => {
+    //         let path = cmd_convert.path;
+    //         let path_type = cmd_convert.path_type;
+    //         match unctool::convert_unc(&path, path_type.into()) {
+    //             Ok(s) => {
+    //                 println!("{}", s);
+    //                 exit(0);
+    //             }
+    //             Err(e) => {
+    //                 print_error(path, e.to_string());
+    //                 exit(1);
+    //             }
+    //         }
+    //     }
+    //     CmdUncToolSub::LocalPath(cmd_local_path) => {
+    //         let path = cmd_local_path.remote_path;
+    //         match unctool::local_path(&path) {
+    //             Ok(s) => {
+    //                 println!("{}", s);
+    //                 exit(0);
+    //             }
+    //             Err(e) => {
+    //                 print_error(path, e.to_string());
+    //                 exit(1);
+    //             }
+    //         }
+    //     }
+    //     CmdUncToolSub::RemotePath(cmd_remote_path) => {
+    //         let path = cmd_remote_path.local_path;
+    //         let path_type = cmd_remote_path.path_type;
+
+    //         if !Path::new(&path).exists() {
+    //             print_error(path, "Path does not exist or access denied".into());
+    //             exit(1);
+    //         }
+
+    //         let abs_path = match abspath(&path) {
+    //             Some(res) => res,
+    //             None => {
+    //                 print_error(path, "Failed to get an absolute path".into());
+    //                 exit(1);
+    //             }
+    //         };
+
+    //         match unctool::remote_path(&abs_path, path_type.into()) {
+    //             Ok(s) => {
+    //                 println!("{}", s);
+    //                 exit(0);
+    //             }
+    //             Err(e) => {
+    //                 print_error(path, e.to_string());
+    //                 exit(1);
+    //             }
+    //         }
+    //     }
+    // }
 }

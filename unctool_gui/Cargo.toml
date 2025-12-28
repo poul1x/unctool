@@ -5,4 +5,7 @@ edition = "2024"
 
 [dependencies]
 iced = "0.14.0"
+argh = "0.1.13"
+shellexpand = "3.1.1"
+unctool = { path = "../unctool", version = "0.3.0" }
 

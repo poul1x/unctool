@@ -2949,7 +2949,10 @@ dependencies = [
 name = "unctool-gui"
 version = "0.1.0"
 dependencies = [
+ "argh",
  "iced",
+ "shellexpand",
+ "unctool",
 ]
 
 [[package]]
