@@ -212,7 +212,13 @@ impl App {
                 Task::none()
             }
 
-            Message::OnSubmit => std::process::exit(0),
+            Message::OnSubmit => {
+                if self.is_success {
+                    std::process::exit(0);
+                } else {
+                    std::process::exit(1);
+                }
+            }
         }
     }
 
