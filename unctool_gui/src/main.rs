@@ -75,8 +75,8 @@ impl FromArgValue for PathType {
 struct CmdUncTool {
     #[argh(subcommand)]
     subcommand: Option<CmdUncToolSub>,
-    #[argh(option, default="1")]
-	/// aaa !!!!!!!!
+    #[argh(option, default = "1")]
+    /// aaa !!!!!!!!
     ui_scale: u32,
 }
 
@@ -142,8 +142,20 @@ fn abspath(p: &str) -> Option<String> {
 fn main() {
     let unctool: CmdUncTool = argh::from_env();
     // let res = unctool::Result::Ok(String::from(r"/some/path"));
-    let res = unctool::Result::Err(unctool::Error::InvalidPathFormat);
-    app_result::run(res);
+    let result: unctool::Result<String> = unctool::Result::Err(unctool::Error::InvalidPathFormat);
+
+    let (is_success, text_value) = match result {
+        unctool::Result::Ok(value) => (true, value.clone()),
+        unctool::Result::Err(err) => (false, err.to_string()),
+    };
+
+    let app_init = app_result::InitContext {
+        is_success: is_success,
+        text_value: text_value,
+        scale_factor: 1.0,
+    };
+
+    app_result::run(app_init);
     // match unctool.subcommand {
     //     CmdUncToolSub::Version(_) => {
     //         println!("unctool-cli {}", env!("CARGO_PKG_VERSION"));

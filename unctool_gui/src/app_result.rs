@@ -1,32 +1,34 @@
-use iced::Alignment::Center;
+use iced::Alignment;
 use iced::Element;
 use iced::Font;
 use iced::Length;
-use iced::Length::Shrink;
 use iced::Padding;
 use iced::Subscription;
 use iced::Task;
-use iced::alignment::Horizontal::Left;
-use iced::alignment::Vertical::Top;
+use iced::alignment::Horizontal;
+use iced::alignment::Vertical;
 use iced::clipboard;
 use iced::time;
-use iced::widget::Text;
-use iced::widget::button;
-use iced::widget::row;
-use iced::widget::space::horizontal;
-use iced::widget::value;
-use iced::widget::{column, pick_list, scrollable, space, text, text_input};
-use iced::window;
-use iced::window::Settings;
+use iced::widget;
+use iced::widget::Button;
+use iced::widget::{Column, Row};
+use iced::widget::{column, row};
 use std::time::{Duration, Instant};
 use unctool;
 
-pub fn run(result: unctool::Result<String>) -> iced::Result {
-    iced::application(move || App::new(&result), App::update, App::view)
+#[derive(Debug)]
+pub struct InitContext {
+    pub is_success: bool,
+    pub text_value: String,
+    pub scale_factor: f32,
+}
+
+pub fn run(init_context: InitContext) -> iced::Result {
+    iced::application(move || App::new(&init_context), App::update, App::view)
         .subscription(App::subscription)
-        .title(App::title)
+        .scale_factor(App::scale_factor)
         .window_size((300, 120))
-        .scale_factor(|_| 1.0)
+        .title(App::title)
         .centered()
         .run()
 }
@@ -34,13 +36,31 @@ pub fn run(result: unctool::Result<String>) -> iced::Result {
 #[derive(Debug, PartialEq)]
 enum CopyButtonState {
     Enabled,
-    TempDisabled(Instant),
+    Disabled(Instant),
 }
 
-struct App {
-    is_success: bool,
-    text_value: String,
-    copy_btn: CopyButtonState,
+#[derive(Debug)]
+struct FontSize {
+    regular: u32,
+    large: u32,
+}
+
+impl FontSize {
+    fn new(regular: u32, large: u32) -> Self {
+        FontSize {
+            regular: regular,
+            large: large,
+        }
+    }
+}
+
+impl Default for FontSize {
+    fn default() -> Self {
+        FontSize {
+            regular: 14,
+            large: 18,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -51,102 +71,140 @@ enum Message {
     OnTick,
 }
 
+#[derive(Debug)]
+struct App {
+    is_success: bool,
+    text_value: String,
+    copy_button_state: CopyButtonState,
+    font_size: FontSize,
+    scale_factor: f32,
+}
+
 impl App {
     fn title(&self) -> String {
         String::from("UNC Tool")
     }
 
-    fn new(result: &unctool::Result<String>) -> (Self, Task<Message>) {
-        let (is_success, text_value) = match result {
-            unctool::Result::Ok(value) => (true, value.clone()),
-            unctool::Result::Err(err) => (false, err.to_string()),
-        };
+    fn scale_factor(&self) -> f32 {
+        self.scale_factor
+    }
 
+    fn new(init_context: &InitContext) -> (Self, Task<Message>) {
         (
             App {
-                is_success: is_success,
-                text_value: text_value,
-                copy_btn: CopyButtonState::Enabled,
+                is_success: init_context.is_success,
+                text_value: init_context.text_value.clone(),
+                scale_factor: init_context.scale_factor,
+                copy_button_state: CopyButtonState::Enabled,
+                font_size: FontSize::default(),
             },
             Task::default(),
         )
     }
 
-    fn view(&self) -> Element<'_, Message> {
-        let size = 14;
-        let size_big = size + 4;
-
-        let success = match self.is_success {
-            true => text("Success")
-                .size(size_big)
-                .height(Length::Fill)
-                .align_x(Center),
-            false => text("Failed")
-                .size(size_big)
-                .height(Length::Fill)
-                .align_x(Center),
+    fn text_success_or_failure(&self) -> Element<'_, Message> {
+        let content = match self.is_success {
+            true => "Success",
+            false => "Failure",
         };
 
-        let text2 = text_input("Result", &self.text_value)
-            .size(size)
+        widget::text(content)
+            .size(self.font_size.large)
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .into()
+    }
+
+    fn text_input_result_or_error(&self) -> Element<'_, Message> {
+        let placeholder = match self.is_success {
+            true => "Success",
+            false => "Failure",
+        };
+
+        widget::text_input(placeholder, &self.text_value)
+            .size(self.font_size.regular)
             .width(Length::Fill)
             .font(Font::MONOSPACE)
             .on_input(Message::PathChanged)
-            .align_x(Left);
+            .align_x(Horizontal::Left)
+            .into()
+    }
 
-        let btn_copy = match self.copy_btn {
-            CopyButtonState::Enabled => button(text("Copy").size(size))
-                .on_press(Message::OnCopy)
-                .width(Length::Shrink)
-                .padding(5)
-                .style(button::primary),
-            CopyButtonState::TempDisabled(_) => button(text("Done").size(size))
-                .width(Length::Shrink)
-                .padding(5)
-                .style(button::primary),
+    fn button<'a>(&self, s: &'a str) -> Button<'a, Message> {
+        widget::button(
+            widget::text(s)
+                .align_x(Alignment::Center)
+                .size(self.font_size.regular),
+        )
+    }
+
+    fn button_copy(&self) -> Element<'_, Message> {
+        let btn = match self.copy_button_state {
+            CopyButtonState::Enabled => self.button("Copy").on_press(Message::OnCopy),
+            CopyButtonState::Disabled(_) => self.button("Done"),
         };
 
-        let row3 = row![success].align_y(Center);
+        btn.style(widget::button::primary)
+            .width(Length::Shrink)
+            .padding(5)
+            .into()
+    }
 
-        let row4 = row![text2, btn_copy].align_y(Center).spacing(2);
-
-        let btn_ok = button(text("Ok").align_x(Center).size(size))
+    fn button_ok(&self) -> Element<'_, Message> {
+        self.button("Ok")
             .width(Length::Fill)
             .on_press(Message::OnSubmit)
-            .style(button::primary);
+            .style(widget::button::primary)
+            .into()
+    }
 
-        let row5 = row![btn_ok].align_y(Center);
+    fn row_header(&self) -> Element<'_, Message> {
+        row![self.text_success_or_failure()]
+            .align_y(Alignment::Center)
+            .into()
+    }
 
-        let col = column![row3, row4, space().height(5), row5]
-            .align_x(Center)
-            .padding(10)
-            .spacing(0);
+    fn row_body(&self) -> Row<'_, Message> {
+        row![self.text_input_result_or_error(), self.button_copy()]
+            .align_y(Vertical::Center)
+            .spacing(2)
+            .into()
+    }
 
-        col.into()
+    fn row_footer(&self) -> Row<'_, Message> {
+        row![self.button_ok()].align_y(Vertical::Center).into()
+    }
+
+    fn view(&self) -> Element<'_, Message> {
+        column![
+            self.row_header(),
+            self.row_body(),
+            widget::space().height(5),
+            self.row_footer()
+        ]
+        .align_x(Alignment::Center)
+        .padding(10)
+        .spacing(0)
+        .into()
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::OnCopy => {
-                let x = Instant::now().checked_add(Duration::from_secs(2)).unwrap();
-                self.copy_btn = CopyButtonState::TempDisabled(x);
+                if let Some(until) = Instant::now().checked_add(Duration::from_secs(1)) {
+                    self.copy_button_state = CopyButtonState::Disabled(until);
+                }
                 clipboard::write(self.text_value.clone()).into()
             }
-
             Message::OnTick => {
-                let x = match self.copy_btn {
-                    CopyButtonState::TempDisabled(ins) => {
-                        if ins <= Instant::now() {
-                            false
-                        } else {
-                            true
+                match self.copy_button_state {
+                    CopyButtonState::Enabled => {}
+                    CopyButtonState::Disabled(until) => {
+                        if until <= Instant::now() {
+                            self.copy_button_state = CopyButtonState::Enabled
                         }
                     }
-                    CopyButtonState::Enabled => true,
                 };
-                if !x {
-                    self.copy_btn = CopyButtonState::Enabled;
-                }
                 Task::none()
             }
             Message::PathChanged(val) => {
@@ -159,38 +217,11 @@ impl App {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        match self.copy_btn {
+        match self.copy_button_state {
             CopyButtonState::Enabled => Subscription::none(),
-            CopyButtonState::TempDisabled(_) => {
+            CopyButtonState::Disabled(_) => {
                 time::every(Duration::from_millis(500)).map(|_| Message::OnTick)
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use iced_test::{Error, simulator};
-
-    #[test]
-    fn it_counts() -> Result<(), Error> {
-        let mut counter = Counter { value: 0 };
-        let mut ui = simulator(counter.view());
-
-        let _ = ui.click("Increment")?;
-        let _ = ui.click("Increment")?;
-        let _ = ui.click("Decrement")?;
-
-        for message in ui.into_messages() {
-            counter.update(message);
-        }
-
-        assert_eq!(counter.value, 1);
-
-        let mut ui = simulator(counter.view());
-        assert!(ui.find("1").is_ok(), "Counter should display 1!");
-
-        Ok(())
     }
 }
