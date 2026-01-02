@@ -40,8 +40,8 @@ use std::path::Path;
 use std::process::exit;
 
 use unctool;
-mod gui_pre;
-mod gui_post;
+mod app_input;
+mod app_result;
 
 #[derive(Debug, PartialEq)]
 pub enum PathType {
@@ -75,7 +75,7 @@ impl FromArgValue for PathType {
 struct CmdUncTool {
     #[argh(subcommand)]
     subcommand: Option<CmdUncToolSub>,
-    #[argh(option, default="1.0")]
+    #[argh(option, default="1")]
 	/// aaa !!!!!!!!
     ui_scale: u32,
 }
@@ -141,7 +141,9 @@ fn abspath(p: &str) -> Option<String> {
 
 fn main() {
     let unctool: CmdUncTool = argh::from_env();
-	gui_post::show();
+    // let res = unctool::Result::Ok(String::from(r"/some/path"));
+    let res = unctool::Result::Err(unctool::Error::InvalidPathFormat);
+    app_result::run(res);
     // match unctool.subcommand {
     //     CmdUncToolSub::Version(_) => {
     //         println!("unctool-cli {}", env!("CARGO_PKG_VERSION"));
