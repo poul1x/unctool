@@ -40,8 +40,10 @@ use std::path::Path;
 use std::process::exit;
 
 use unctool;
-mod app_input;
-mod app_result;
+
+use crate::app_result::InitContext;
+mod stage1;
+mod stage2;
 
 #[derive(Debug, PartialEq)]
 pub enum PathType {
@@ -75,9 +77,9 @@ impl FromArgValue for PathType {
 struct CmdUncTool {
     #[argh(subcommand)]
     subcommand: Option<CmdUncToolSub>,
-    #[argh(option, default = "1")]
+    #[argh(option, default = "1.0")]
     /// aaa !!!!!!!!
-    ui_scale: u32,
+    ui_scale: f32,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -139,83 +141,111 @@ fn abspath(p: &str) -> Option<String> {
     canonical_path.into_os_string().into_string().ok()
 }
 
-fn main() {
-    let unctool: CmdUncTool = argh::from_env();
-    // let res = unctool::Result::Ok(String::from(r"/some/path"));
-    let result: unctool::Result<String> = unctool::Result::Err(unctool::Error::InvalidPathFormat);
+fn run_stage1(unctool: CmdUncTool) -> ! {
+    let init_context = stage1::InitContext {
+        scale_factor: unctool.ui_scale,
+    };
 
+    match stage1::run(init_context) {
+        Ok(_) => {
+            exit(0);
+        }
+        Err(e) => {
+            eprintln!("[Fatal] Unable to run app: {}", e.to_string());
+            exit(1);
+        }
+    }
+}
+
+fn process_result(result: unctool::Result<String>) -> app_result::InitContext {
     let (is_success, text_value) = match result {
         unctool::Result::Ok(value) => (true, value.clone()),
         unctool::Result::Err(err) => (false, err.to_string()),
     };
 
-    let app_init = app_result::InitContext {
+    app_result::InitContext {
         is_success: is_success,
         text_value: text_value,
         scale_factor: 1.0,
-    };
+    }
+}
 
-    app_result::run(app_init);
-    // match unctool.subcommand {
-    //     CmdUncToolSub::Version(_) => {
-    //         println!("unctool-cli {}", env!("CARGO_PKG_VERSION"));
-    //         println!("unctool {}", unctool::version());
-    //         exit(0);
-    //     }
-    //     CmdUncToolSub::Convert(cmd_convert) => {
-    //         let path = cmd_convert.path;
-    //         let path_type = cmd_convert.path_type;
-    //         match unctool::convert_unc(&path, path_type.into()) {
-    //             Ok(s) => {
-    //                 println!("{}", s);
-    //                 exit(0);
-    //             }
-    //             Err(e) => {
-    //                 print_error(path, e.to_string());
-    //                 exit(1);
-    //             }
-    //         }
-    //     }
-    //     CmdUncToolSub::LocalPath(cmd_local_path) => {
-    //         let path = cmd_local_path.remote_path;
-    //         match unctool::local_path(&path) {
-    //             Ok(s) => {
-    //                 println!("{}", s);
-    //                 exit(0);
-    //             }
-    //             Err(e) => {
-    //                 print_error(path, e.to_string());
-    //                 exit(1);
-    //             }
-    //         }
-    //     }
-    //     CmdUncToolSub::RemotePath(cmd_remote_path) => {
-    //         let path = cmd_remote_path.local_path;
-    //         let path_type = cmd_remote_path.path_type;
+fn run_stage2(unctool: CmdUncTool) -> ! {
+    match unctool.subcommand.unwrap() {
+        CmdUncToolSub::Version(_) => {
+            println!("unctool-gui {}", env!("CARGO_PKG_VERSION"));
+            println!("unctool {}", unctool::version());
+            exit(0);
+        }
+        CmdUncToolSub::Convert(cmd_convert) => {
+            let path = cmd_convert.path;
+            let path_type = cmd_convert.path_type;
 
-    //         if !Path::new(&path).exists() {
-    //             print_error(path, "Path does not exist or access denied".into());
-    //             exit(1);
-    //         }
+            let result = unctool::convert_unc(&path, path_type.into());
+            let init_context = InitContext {
+                scale_factor: unctool.ui_scale,
+                ..process_result(result)
+            };
 
-    //         let abs_path = match abspath(&path) {
-    //             Some(res) => res,
-    //             None => {
-    //                 print_error(path, "Failed to get an absolute path".into());
-    //                 exit(1);
-    //             }
-    //         };
+            match app_result::run(init_context) {
+                Ok(_) => {
+                    exit(0);
+                }
+                Err(e) => {
+                    eprintln!("Failed to run app");
+                    exit(1);
+                }
+            }
+        }
+        CmdUncToolSub::LocalPath(cmd_local_path) => {
+            let path = cmd_local_path.remote_path;
+            match unctool::local_path(&path) {
+                Ok(s) => {
+                    println!("{}", s);
+                    exit(0);
+                }
+                Err(e) => {
+                    print_error(path, e.to_string());
+                    exit(1);
+                }
+            }
+        }
+        CmdUncToolSub::RemotePath(cmd_remote_path) => {
+            let path = cmd_remote_path.local_path;
+            let path_type = cmd_remote_path.path_type;
 
-    //         match unctool::remote_path(&abs_path, path_type.into()) {
-    //             Ok(s) => {
-    //                 println!("{}", s);
-    //                 exit(0);
-    //             }
-    //             Err(e) => {
-    //                 print_error(path, e.to_string());
-    //                 exit(1);
-    //             }
-    //         }
-    //     }
-    // }
+            if !Path::new(&path).exists() {
+                print_error(path, "Path does not exist or access denied".into());
+                exit(1);
+            }
+
+            let abs_path = match abspath(&path) {
+                Some(res) => res,
+                None => {
+                    print_error(path, "Failed to get an absolute path".into());
+                    exit(1);
+                }
+            };
+
+            match unctool::remote_path(&abs_path, path_type.into()) {
+                Ok(s) => {
+                    println!("{}", s);
+                    exit(0);
+                }
+                Err(e) => {
+                    print_error(path, e.to_string());
+                    exit(1);
+                }
+            }
+        }
+    }
+}
+
+fn main() -> ! {
+    let unctool: CmdUncTool = argh::from_env();
+    if unctool.subcommand.is_none() {
+        run_stage1(unctool);
+    } else {
+        run_stage2(unctool);
+    }
 }

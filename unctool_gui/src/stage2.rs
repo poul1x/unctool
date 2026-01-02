@@ -29,6 +29,7 @@ pub fn run(init_context: InitContext) -> iced::Result {
         .scale_factor(App::scale_factor)
         .window_size((300, 120))
         .title(App::title)
+        .resizable(false)
         .centered()
         .run()
 }

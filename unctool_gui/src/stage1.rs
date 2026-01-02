@@ -1,17 +1,31 @@
+use iced::Alignment;
 use iced::Alignment::Center;
 use iced::Element;
+use iced::Font;
 use iced::Length::Fill;
+use iced::Length::FillPortion;
 use iced::Length::Shrink;
 use iced::Task;
+use iced::alignment::Horizontal;
 use iced::widget::button;
+use iced::widget::container;
 use iced::widget::row;
-use iced::widget::{column, pick_list, scrollable, space, text_input};
+use iced::widget::{column, pick_list, scrollable, space, text_input, text};
 use iced::window;
 
-pub fn main() -> iced::Result {
-    iced::application(App::new, App::update, App::view)
+#[derive(Debug, Clone)]
+pub struct InitContext {
+    pub scale_factor: f32,
+}
+
+pub fn run(init_context: InitContext) -> iced::Result {
+    iced::application(move || App::new(init_context.clone()), App::update, App::view)
+        // .subscription(App::subscription)
+        .scale_factor(App::scale_factor)
+        .window_size((400, 200))
         .title(App::title)
-        .window_size((400.0, 200.0))
+        .resizable(false)
+        .centered()
         .run()
 }
 
@@ -20,12 +34,8 @@ struct App {
     target_os: Option<TargetOS>,
     command: Option<CommandName>,
     path: String,
+    scale_factor: f32,
 }
-
-// #[derive(Debug, Default)]
-// struct AppState {
-//     input_value: String,
-// }
 
 #[derive(Debug, Clone)]
 enum Message {
@@ -69,9 +79,9 @@ impl std::fmt::Display for CommandName {
             f,
             "{}",
             match self {
-                CommandName::Convert => "Linux UNC <-> Windows UNC",
-                CommandName::LocalPath => "Windows/Linux UNC -> Local path",
-                CommandName::RemotePath => "Local path -> Windows/Linux UNC",
+                CommandName::Convert => r"Linux UNC ↔ Windows UNC",
+                CommandName::LocalPath => r"Windows/Linux UNC → Local path",
+                CommandName::RemotePath => r"Local path → Windows/Linux UNC",
             }
         )
     }
@@ -82,9 +92,14 @@ impl App {
         String::from("UNCTool")
     }
 
-    fn new() -> (Self, Task<Message>) {
+    fn scale_factor(&self) -> f32 {
+        self.scale_factor
+    }
+
+    fn new(init_context: InitContext) -> (Self, Task<Message>) {
         (
             App {
+                scale_factor: init_context.scale_factor,
                 target_os: Some(TargetOS::Windows),
                 command: Some(CommandName::Convert),
                 path: String::new(),
@@ -114,9 +129,9 @@ impl App {
         let input = text_input("Enter UNC or filesystem path", &self.path)
             .on_input(Message::PathChanged)
             .on_submit(Message::OnSubmit)
-            .padding(15)
-            .size(30)
-            .align_x(Center);
+            .width(Fill)
+            .align_x(Horizontal::Left);
+
 
         let btn_sumbit = button("Submit")
             .on_press(Message::OnSubmit)
@@ -128,37 +143,27 @@ impl App {
             .padding(10)
             .style(button::secondary);
 
-        let row1 = row!["Command", pick_list_commands]
-            .width(Fill)
-            .height(Fill)
+        let row1 = row![text("Command").width(Fill),  pick_list_commands.width(Shrink)]
+        	.width(Fill)
             .align_y(Center)
             .spacing(10);
 
-        let row2 = row!["Target OS", pick_list_targets]
-            .width(Fill)
-            .height(Fill)
+        let row2 = row![text("Target OS").width(Fill), pick_list_targets.width(Shrink)]
+        	.width(Fill)
             .align_y(Center)
             .spacing(10);
 
-        let row3 = row![input]
-            .width(Fill)
-            .height(Fill)
+        let row3 = row!["Path", input]
+        	.width(Fill)
             .align_y(Center)
             .spacing(10);
 
-        let row4 = row![btn_sumbit, btn_cancel]
-            .width(Fill)
-            .height(Fill)
+        let row4 = row![space::horizontal(), btn_sumbit, btn_cancel]
             .align_y(Center)
+            .padding(5)
             .spacing(10);
 
-        // let row2 = row!["Target OS", pick_list_targets]
-        //     .width(Fill)
-        //     .height(Fill)
-        //     .align_y(Center)
-        //     .spacing(10);
-
-        let content = column![row1, row2, row3, row4].spacing(10);
+        let content = column![row1, row2, space::vertical(), row3, space::vertical(), row4].spacing(5).padding(5);
 
         content.into()
     }
@@ -176,32 +181,5 @@ impl App {
                 println!("On submit")
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use iced_test::{Error, simulator};
-
-    #[test]
-    fn it_counts() -> Result<(), Error> {
-        let mut counter = Counter { value: 0 };
-        let mut ui = simulator(counter.view());
-
-        let _ = ui.click("Increment")?;
-        let _ = ui.click("Increment")?;
-        let _ = ui.click("Decrement")?;
-
-        for message in ui.into_messages() {
-            counter.update(message);
-        }
-
-        assert_eq!(counter.value, 1);
-
-        let mut ui = simulator(counter.view());
-        assert!(ui.find("1").is_ok(), "Counter should display 1!");
-
-        Ok(())
     }
 }
