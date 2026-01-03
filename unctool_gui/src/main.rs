@@ -14,8 +14,8 @@ use std::process::exit;
 
 use unctool;
 
-mod stage1;
-mod stage2;
+mod app_submit;
+mod app_results;
 
 // use crate::stage1;
 // use crate::stage2;
@@ -119,13 +119,13 @@ fn handle_app_exit(result: iced::Result) -> ! {
 }
 
 fn run_stage1(unctool: CmdUncTool) -> ! {
-    let init_context = stage1::InitContext {
-        ui_settings: stage1::UISettings {
+    let init_context = app_submit::InitContext {
+        ui_settings: app_submit::UISettings {
             scale_factor: unctool.ui_scale,
         },
     };
 
-    handle_app_exit(stage1::run(init_context));
+    handle_app_exit(app_submit::run(init_context));
 }
 
 fn format_error(path: String, err_msg: &str) -> String {
@@ -133,7 +133,7 @@ fn format_error(path: String, err_msg: &str) -> String {
 }
 
 fn run_stage2(unctool: CmdUncTool) -> ! {
-    let ui_settings = stage2::UISettings {
+    let ui_settings = app_results::UISettings {
         scale_factor: unctool.ui_scale,
     };
 
@@ -143,65 +143,65 @@ fn run_stage2(unctool: CmdUncTool) -> ! {
             let path_type = cmd_convert.path_type;
 
             let init_context = match unctool::convert_unc(&path, path_type.into()) {
-                Ok(val) => stage2::InitContext {
+                Ok(val) => app_results::InitContext {
                     is_success: true,
                     text_value: val,
                     ui_settings: ui_settings,
                 },
-                Err(e) => stage2::InitContext {
+                Err(e) => app_results::InitContext {
                     is_success: false,
                     text_value: format_error(path, e.to_string().as_str()),
                     ui_settings: ui_settings,
                 },
             };
 
-            handle_app_exit(stage2::run(init_context));
+            handle_app_exit(app_results::run(init_context));
         }
         CmdUncToolSub::LocalPath(cmd_local_path) => {
             let path = cmd_local_path.remote_path;
             let init_context = match unctool::local_path(&path) {
-                Ok(val) => stage2::InitContext {
+                Ok(val) => app_results::InitContext {
                     is_success: true,
                     text_value: val,
                     ui_settings: ui_settings,
                 },
-                Err(e) => stage2::InitContext {
+                Err(e) => app_results::InitContext {
                     is_success: false,
                     text_value: format_error(path, e.to_string().as_str()),
                     ui_settings: ui_settings,
                 },
             };
 
-            handle_app_exit(stage2::run(init_context));
+            handle_app_exit(app_results::run(init_context));
         }
         CmdUncToolSub::RemotePath(cmd_remote_path) => {
             let path = cmd_remote_path.local_path;
             let path_type = cmd_remote_path.path_type;
 
-            let init_context: stage2::InitContext = {
+            let init_context: app_results::InitContext = {
                 if Path::new(&path).exists() {
                     if let Some(abs_path) = abspath(&path) {
                         match unctool::remote_path(&abs_path, path_type.into()) {
-                            Ok(val) => stage2::InitContext {
+                            Ok(val) => app_results::InitContext {
                                 is_success: true,
                                 text_value: val,
                                 ui_settings: ui_settings,
                             },
-                            Err(e) => stage2::InitContext {
+                            Err(e) => app_results::InitContext {
                                 is_success: false,
                                 text_value: format_error(path, e.to_string().as_str()),
                                 ui_settings: ui_settings,
                             },
                         }
                     } else {
-                        stage2::InitContext {
+                        app_results::InitContext {
                             is_success: false,
                             text_value: format_error(path, "Path does not exist or access denied"),
                             ui_settings: ui_settings,
                         }
                     }
                 } else {
-                    stage2::InitContext {
+                    app_results::InitContext {
                         is_success: false,
                         text_value: format_error(path, "Path does not exist or access denied"),
                         ui_settings: ui_settings,
@@ -209,7 +209,7 @@ fn run_stage2(unctool: CmdUncTool) -> ! {
                 }
             };
 
-            handle_app_exit(stage2::run(init_context));
+            handle_app_exit(app_results::run(init_context));
         }
     }
 }
