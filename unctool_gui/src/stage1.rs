@@ -6,28 +6,17 @@ use iced::alignment::Vertical;
 use iced::widget;
 use iced::widget::Text;
 use iced::widget::{column, row};
+use std::env;
+use std::process::Command;
 
 #[derive(Debug)]
 struct FontSize {
     regular: u32,
-    large: u32,
-}
-
-impl FontSize {
-    fn new(regular: u32, large: u32) -> Self {
-        FontSize {
-            regular: regular,
-            large: large,
-        }
-    }
 }
 
 impl Default for FontSize {
     fn default() -> Self {
-        FontSize {
-            regular: 14,
-            large: 18,
-        }
+        FontSize { regular: 14 }
     }
 }
 
@@ -66,9 +55,10 @@ enum Message {
     CommandChanged(CommandName),
     PathChanged(String),
     OnSubmit,
+    OnCancel,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum TargetOS {
     #[default]
     Windows,
@@ -85,7 +75,7 @@ impl std::fmt::Display for TargetOS {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum CommandName {
     #[default]
     Convert,
@@ -145,7 +135,7 @@ impl App {
     fn button_cancel(&self) -> Element<'_, Message> {
         widget::button(self.text("Cancel"))
             .style(widget::button::secondary)
-            .on_press(Message::OnSubmit)
+            .on_press(Message::OnCancel)
             .width(Length::Shrink)
             .padding(10)
             .into()
@@ -166,7 +156,11 @@ impl App {
     }
 
     fn pick_list_targets(&self) -> Element<'_, Message> {
-        let targets = [TargetOS::Windows, TargetOS::Linux];
+        let mut targets = vec![TargetOS::Windows, TargetOS::Linux];
+        if self.target_os == None {
+            targets.clear();
+        }
+
         widget::pick_list(targets, self.target_os, Message::TargetOsChanged)
             .text_size(self.font_size.regular)
             .placeholder("Choose target OS")
@@ -242,24 +236,52 @@ impl App {
         .into()
     }
 
-    fn update(&mut self, message: Message) {
+    fn on_submit(&self) {
+        let command = match self.command.unwrap() {
+            CommandName::Convert => "convert",
+            CommandName::LocalPath => "local-path",
+            CommandName::RemotePath => "remote-path",
+        };
+
+        let fn_target_os = || match self.target_os.unwrap() {
+            TargetOS::Windows => "windows",
+            TargetOS::Linux => "linux",
+        };
+
+        let args: Vec<String> = env::args().collect();
+        let mut binding = Command::new(args[0].clone());
+        let cmd = binding.arg(command).arg(self.path.clone());
+        let final_cmd = match self.command.unwrap() {
+            CommandName::LocalPath => cmd,
+            _ => cmd.arg("-t").arg(fn_target_os()),
+        };
+
+        final_cmd.spawn().ok();
+    }
+
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::PathChanged(val) => {
+                self.path = val;
+                Task::none()
+            }
             Message::TargetOsChanged(val) => {
                 self.target_os = Some(val);
+                Task::none()
             }
             Message::CommandChanged(val) => {
                 self.command = Some(val);
+                self.target_os = match val {
+                    CommandName::LocalPath => None,
+                    _ => Some(TargetOS::Windows),
+                };
+                Task::none()
             }
-            Message::PathChanged(val) => self.path = val,
             Message::OnSubmit => {
-                // let foo = Command::new("echo")
-                //       .arg("hello")
-                //       .output().unwrap();
-
-                println!("{:?}", self.target_os);
-                println!("{:?}", self.command);
-                println!("{:?}", self.path);
+                self.on_submit();
+                Task::none()
             }
+            Message::OnCancel => iced::exit(),
         }
     }
 }

@@ -100,10 +100,6 @@ struct CmdConvert {
     path_type: PathType,
 }
 
-fn print_error(path: String, err_msg: String) {
-    eprintln!("[Error] Failed to process '{}': {}", path, err_msg);
-}
-
 fn abspath(p: &str) -> Option<String> {
     let expanded_path = shellexpand::full(p).ok()?;
     let canonical_path = std::fs::canonicalize(expanded_path.as_ref()).ok()?;
@@ -113,7 +109,6 @@ fn abspath(p: &str) -> Option<String> {
 fn handle_app_exit(result: iced::Result) -> ! {
     match result {
         Ok(_) => {
-            println!("App exited normally");
             exit(0);
         }
         Err(e) => {

@@ -19,15 +19,6 @@ struct FontSize {
     large: u32,
 }
 
-impl FontSize {
-    fn new(regular: u32, large: u32) -> Self {
-        FontSize {
-            regular: regular,
-            large: large,
-        }
-    }
-}
-
 impl Default for FontSize {
     fn default() -> Self {
         FontSize {
@@ -36,7 +27,6 @@ impl Default for FontSize {
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct UISettings {
@@ -220,13 +210,7 @@ impl App {
                 Task::none()
             }
 
-            Message::OnSubmit => {
-                if self.is_success {
-                    std::process::exit(0);
-                } else {
-                    std::process::exit(1);
-                }
-            }
+            Message::OnSubmit => iced::exit(),
         }
     }
 
