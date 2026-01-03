@@ -14,9 +14,11 @@ use std::process::exit;
 
 use unctool;
 
-use crate::stage2::InitContext;
 mod stage1;
 mod stage2;
+
+// use crate::stage1;
+// use crate::stage2;
 
 #[derive(Debug, PartialEq)]
 pub enum PathType {

@@ -2,49 +2,16 @@ use iced::Alignment;
 use iced::Element;
 use iced::Font;
 use iced::Length;
-use iced::Padding;
 use iced::Subscription;
 use iced::Task;
 use iced::alignment::Horizontal;
 use iced::alignment::Vertical;
 use iced::clipboard;
-use iced::exit;
 use iced::time;
 use iced::widget;
 use iced::widget::Button;
-use iced::widget::{Column, Row};
 use iced::widget::{column, row};
 use std::time::{Duration, Instant};
-use unctool;
-
-#[derive(Debug, Clone)]
-pub struct UISettings {
-    pub scale_factor: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct InitContext {
-    pub is_success: bool,
-    pub text_value: String,
-    pub ui_settings: UISettings,
-}
-
-pub fn run(init_context: InitContext) -> iced::Result {
-    iced::application(move || App::new(init_context.clone()), App::update, App::view)
-        .subscription(App::subscription)
-        .scale_factor(App::scale_factor)
-        .window_size((300, 120))
-        .title(App::title)
-        .resizable(false)
-        .centered()
-        .run()
-}
-
-#[derive(Debug, PartialEq)]
-enum CopyButtonState {
-    Enabled,
-    Disabled(Instant),
-}
 
 #[derive(Debug)]
 struct FontSize {
@@ -68,6 +35,40 @@ impl Default for FontSize {
             large: 18,
         }
     }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct UISettings {
+    pub scale_factor: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct InitContext {
+    pub is_success: bool,
+    pub text_value: String,
+    pub ui_settings: UISettings,
+}
+
+pub fn run(init_context: InitContext) -> iced::Result {
+    iced::application(
+        move || App::new(init_context.clone()),
+        App::update,
+        App::view,
+    )
+    .subscription(App::subscription)
+    .scale_factor(App::scale_factor)
+    .window_size((300, 120))
+    .title(App::title)
+    .resizable(false)
+    .centered()
+    .run()
+}
+
+#[derive(Debug, PartialEq)]
+enum CopyButtonState {
+    Enabled,
+    Disabled(Instant),
 }
 
 #[derive(Debug, Clone)]
@@ -171,14 +172,14 @@ impl App {
             .into()
     }
 
-    fn row_body(&self) -> Row<'_, Message> {
+    fn row_body(&self) -> Element<'_, Message> {
         row![self.text_input_result_or_error(), self.button_copy()]
             .align_y(Vertical::Center)
             .spacing(2)
             .into()
     }
 
-    fn row_footer(&self) -> Row<'_, Message> {
+    fn row_footer(&self) -> Element<'_, Message> {
         row![self.button_ok()].align_y(Vertical::Center).into()
     }
 

@@ -1,17 +1,35 @@
-use iced::Alignment;
-use iced::Alignment::Center;
 use iced::Element;
-use iced::Font;
-use iced::Length::Fill;
-use iced::Length::FillPortion;
-use iced::Length::Shrink;
+use iced::Length;
 use iced::Task;
 use iced::alignment::Horizontal;
-use iced::widget::button;
-use iced::widget::container;
-use iced::widget::row;
-use iced::widget::{column, pick_list, scrollable, space, text_input, text};
-use iced::window;
+use iced::alignment::Vertical;
+use iced::widget;
+use iced::widget::Text;
+use iced::widget::{column, row};
+
+#[derive(Debug)]
+struct FontSize {
+    regular: u32,
+    large: u32,
+}
+
+impl FontSize {
+    fn new(regular: u32, large: u32) -> Self {
+        FontSize {
+            regular: regular,
+            large: large,
+        }
+    }
+}
+
+impl Default for FontSize {
+    fn default() -> Self {
+        FontSize {
+            regular: 14,
+            large: 18,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct UISettings {
@@ -23,10 +41,10 @@ pub struct InitContext {
     pub ui_settings: UISettings,
 }
 
-pub fn run(init_context: InitContext) -> iced::Result {
-    iced::application(move || App::new(init_context.clone()), App::update, App::view)
+pub fn run(ctx: InitContext) -> iced::Result {
+    iced::application(move || App::new(ctx.clone()), App::update, App::view)
         .scale_factor(App::scale_factor)
-        .window_size((400, 200))
+        .window_size((400, 170))
         .title(App::title)
         .resizable(false)
         .centered()
@@ -39,6 +57,7 @@ struct App {
     command: Option<CommandName>,
     path: String,
     scale_factor: f32,
+    font_size: FontSize,
 }
 
 #[derive(Debug, Clone)]
@@ -58,14 +77,11 @@ pub enum TargetOS {
 
 impl std::fmt::Display for TargetOS {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                TargetOS::Windows => "Windows",
-                TargetOS::Linux => "Linux",
-            }
-        )
+        let s = match self {
+            TargetOS::Windows => "Windows",
+            TargetOS::Linux => "Linux",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -79,15 +95,12 @@ pub enum CommandName {
 
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CommandName::Convert => r"Linux UNC ↔ Windows UNC",
-                CommandName::LocalPath => r"Windows/Linux UNC → Local path",
-                CommandName::RemotePath => r"Local path → Windows/Linux UNC",
-            }
-        )
+        let s = match self {
+            CommandName::Convert => r"Linux UNC ↔ Windows UNC",
+            CommandName::LocalPath => r"Windows/Linux UNC → Local path",
+            CommandName::RemotePath => r"Local path → Windows/Linux UNC",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -106,70 +119,127 @@ impl App {
                 scale_factor: init_context.ui_settings.scale_factor,
                 target_os: Some(TargetOS::Windows),
                 command: Some(CommandName::Convert),
+                font_size: FontSize::default(),
                 path: String::new(),
             },
             Task::default(),
         )
     }
 
-    fn view(&self) -> Element<'_, Message> {
+    fn text<'a>(&self, s: &'a str) -> Text<'a> {
+        widget::text(s).size(self.font_size.regular)
+    }
+
+    fn button_submit(&self) -> Element<'_, Message> {
+        let btn = widget::button(self.text("Submit"));
+        let btn = match !self.path.is_empty() {
+            true => btn.on_press(Message::OnSubmit),
+            false => btn,
+        };
+        btn.width(Length::Shrink)
+            .style(widget::button::primary)
+            .padding(10)
+            .into()
+    }
+
+    fn button_cancel(&self) -> Element<'_, Message> {
+        widget::button(self.text("Cancel"))
+            .style(widget::button::secondary)
+            .on_press(Message::OnSubmit)
+            .width(Length::Shrink)
+            .padding(10)
+            .into()
+    }
+
+    fn pick_list_commands(&self) -> Element<'_, Message> {
         let commands = [
             CommandName::Convert,
             CommandName::LocalPath,
-            CommandName::LocalPath,
+            CommandName::RemotePath,
         ];
 
-        let pick_list_commands = pick_list(commands, self.command, Message::CommandChanged)
-            .placeholder("Choose command");
+        widget::pick_list(commands, self.command, Message::CommandChanged)
+            .text_size(self.font_size.regular)
+            .placeholder("Choose command")
+            .width(Length::Shrink)
+            .into()
+    }
 
+    fn pick_list_targets(&self) -> Element<'_, Message> {
         let targets = [TargetOS::Windows, TargetOS::Linux];
+        widget::pick_list(targets, self.target_os, Message::TargetOsChanged)
+            .text_size(self.font_size.regular)
+            .placeholder("Choose target OS")
+            .width(Length::Shrink)
+            .into()
+    }
 
-        let pick_list_targets = pick_list(targets, self.target_os, Message::TargetOsChanged)
-            .placeholder("Choose target OS");
-
-        // let text = text_input("aaa", "bbb").on_input(Message::PathChanged);
-        // .placeholder("Enter path");
-
-        let input = text_input("Enter UNC or filesystem path", &self.path)
+    fn text_input_path(&self) -> Element<'_, Message> {
+        widget::text_input("Enter UNC or filesystem path", &self.path)
+            .size(self.font_size.regular)
             .on_input(Message::PathChanged)
             .on_submit(Message::OnSubmit)
-            .width(Fill)
-            .align_x(Horizontal::Left);
+            .align_x(Horizontal::Left)
+            .width(Length::Fill)
+            .into()
+    }
 
+    fn row_command(&self) -> Element<'_, Message> {
+        row![
+            self.text("Command").width(Length::Fill),
+            self.pick_list_commands()
+        ]
+        .align_y(Vertical::Center)
+        .width(Length::Fill)
+        .spacing(10)
+        .into()
+    }
 
-        let btn_sumbit = button("Submit")
-            .on_press(Message::OnSubmit)
-            .padding(10)
-            .style(button::primary);
+    fn row_target_os(&self) -> Element<'_, Message> {
+        row![
+            self.text("Target OS").width(Length::Fill),
+            self.pick_list_targets()
+        ]
+        .width(Length::Fill)
+        .align_y(Vertical::Center)
+        .spacing(10)
+        .into()
+    }
 
-        let btn_cancel = button("Cancel")
-            .on_press(Message::OnSubmit)
-            .padding(10)
-            .style(button::secondary);
+    fn row_input_path(&self) -> Element<'_, Message> {
+        row![
+            self.text("Path").width(Length::Shrink),
+            self.text_input_path()
+        ]
+        .width(Length::Fill)
+        .align_y(Vertical::Center)
+        .spacing(10)
+        .into()
+    }
 
-        let row1 = row![text("Command").width(Fill),  pick_list_commands.width(Shrink)]
-        	.width(Fill)
-            .align_y(Center)
-            .spacing(10);
+    fn row_button_bar(&self) -> Element<'_, Message> {
+        row![
+            widget::space::horizontal(),
+            self.button_submit(),
+            self.button_cancel()
+        ]
+        .align_y(Vertical::Center)
+        .spacing(10)
+        .into()
+    }
 
-        let row2 = row![text("Target OS").width(Fill), pick_list_targets.width(Shrink)]
-        	.width(Fill)
-            .align_y(Center)
-            .spacing(10);
-
-        let row3 = row!["Path", input]
-        	.width(Fill)
-            .align_y(Center)
-            .spacing(10);
-
-        let row4 = row![space::horizontal(), btn_sumbit, btn_cancel]
-            .align_y(Center)
-            .padding(5)
-            .spacing(10);
-
-        let content = column![row1, row2, space::vertical(), row3, space::vertical(), row4].spacing(5).padding(5);
-
-        content.into()
+    fn view(&self) -> Element<'_, Message> {
+        column![
+            self.row_command(),
+            self.row_target_os(),
+            widget::space::vertical(),
+            self.row_input_path(),
+            widget::space::vertical(),
+            self.row_button_bar()
+        ]
+        .spacing(5)
+        .padding(10)
+        .into()
     }
 
     fn update(&mut self, message: Message) {
@@ -182,7 +252,13 @@ impl App {
             }
             Message::PathChanged(val) => self.path = val,
             Message::OnSubmit => {
-                println!("On submit")
+                // let foo = Command::new("echo")
+                //       .arg("hello")
+                //       .output().unwrap();
+
+                println!("{:?}", self.target_os);
+                println!("{:?}", self.command);
+                println!("{:?}", self.path);
             }
         }
     }
