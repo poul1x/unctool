@@ -14,16 +14,13 @@ use iced::widget::{column, pick_list, scrollable, space, text_input, text};
 use iced::window;
 
 #[derive(Debug, Clone)]
-pub struct InitContext {
+pub struct UISettings {
     pub scale_factor: f32,
 }
 
-impl Default for InitContext {
-    fn default() -> Self {
-        InitContext {
-            scale_factor: 1.0,
-        }
-    }
+#[derive(Debug, Clone)]
+pub struct InitContext {
+    pub ui_settings: UISettings,
 }
 
 pub fn run(init_context: InitContext) -> iced::Result {
@@ -106,7 +103,7 @@ impl App {
     fn new(init_context: InitContext) -> (Self, Task<Message>) {
         (
             App {
-                scale_factor: init_context.scale_factor,
+                scale_factor: init_context.ui_settings.scale_factor,
                 target_os: Some(TargetOS::Windows),
                 command: Some(CommandName::Convert),
                 path: String::new(),

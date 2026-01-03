@@ -8,6 +8,7 @@ use iced::Task;
 use iced::alignment::Horizontal;
 use iced::alignment::Vertical;
 use iced::clipboard;
+use iced::exit;
 use iced::time;
 use iced::widget;
 use iced::widget::Button;
@@ -17,20 +18,15 @@ use std::time::{Duration, Instant};
 use unctool;
 
 #[derive(Debug, Clone)]
-pub struct InitContext {
-    pub is_success: bool,
-    pub text_value: String,
+pub struct UISettings {
     pub scale_factor: f32,
 }
 
-impl Default for InitContext {
-    fn default() -> Self {
-        InitContext {
-            is_success: false,
-            text_value: String::new(),
-            scale_factor: 1.0,
-        }
-    }
+#[derive(Debug, Clone)]
+pub struct InitContext {
+    pub is_success: bool,
+    pub text_value: String,
+    pub ui_settings: UISettings,
 }
 
 pub fn run(init_context: InitContext) -> iced::Result {
@@ -105,7 +101,7 @@ impl App {
             App {
                 is_success: init_context.is_success,
                 text_value: init_context.text_value,
-                scale_factor: init_context.scale_factor,
+                scale_factor: init_context.ui_settings.scale_factor,
                 copy_button_state: CopyButtonState::Enabled,
                 font_size: FontSize::default(),
             },

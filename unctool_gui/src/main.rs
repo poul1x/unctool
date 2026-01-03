@@ -111,7 +111,7 @@ fn abspath(p: &str) -> Option<String> {
 fn handle_app_exit(result: iced::Result) -> ! {
     match result {
         Ok(_) => {
-            println!("Notmal exit");
+            println!("App exited normally");
             exit(0);
         }
         Err(e) => {
@@ -123,45 +123,56 @@ fn handle_app_exit(result: iced::Result) -> ! {
 
 fn run_stage1(unctool: CmdUncTool) -> ! {
     let init_context = stage1::InitContext {
-        scale_factor: unctool.ui_scale,
+        ui_settings: stage1::UISettings {
+            scale_factor: unctool.ui_scale,
+        },
     };
 
     handle_app_exit(stage1::run(init_context));
 }
 
-fn process_unctool_result(result: unctool::Result<String>) -> stage2::InitContext {
-    let (is_success, text_value) = match result {
-        unctool::Result::Ok(value) => (true, value.clone()),
-        unctool::Result::Err(err) => (false, err.to_string()),
-    };
-
-    stage2::InitContext {
-        is_success: is_success,
-        text_value: text_value,
-        ..Default::default()
-    }
+fn format_error(path: String, err_msg: &str) -> String {
+    format!("{}. Path: '{}'", err_msg, path)
 }
 
 fn run_stage2(unctool: CmdUncTool) -> ! {
+    let ui_settings = stage2::UISettings {
+        scale_factor: unctool.ui_scale,
+    };
+
     match unctool.subcommand.unwrap() {
         CmdUncToolSub::Convert(cmd_convert) => {
             let path = cmd_convert.path;
             let path_type = cmd_convert.path_type;
 
-            let result = unctool::convert_unc(&path, path_type.into());
-            let init_context = InitContext {
-                scale_factor: unctool.ui_scale,
-                ..process_unctool_result(result)
+            let init_context = match unctool::convert_unc(&path, path_type.into()) {
+                Ok(val) => stage2::InitContext {
+                    is_success: true,
+                    text_value: val,
+                    ui_settings: ui_settings,
+                },
+                Err(e) => stage2::InitContext {
+                    is_success: false,
+                    text_value: format_error(path, e.to_string().as_str()),
+                    ui_settings: ui_settings,
+                },
             };
 
             handle_app_exit(stage2::run(init_context));
         }
         CmdUncToolSub::LocalPath(cmd_local_path) => {
             let path = cmd_local_path.remote_path;
-            let result = unctool::local_path(&path);
-            let init_context = InitContext {
-                scale_factor: unctool.ui_scale,
-                ..process_unctool_result(result)
+            let init_context = match unctool::local_path(&path) {
+                Ok(val) => stage2::InitContext {
+                    is_success: true,
+                    text_value: val,
+                    ui_settings: ui_settings,
+                },
+                Err(e) => stage2::InitContext {
+                    is_success: false,
+                    text_value: format_error(path, e.to_string().as_str()),
+                    ui_settings: ui_settings,
+                },
             };
 
             handle_app_exit(stage2::run(init_context));
@@ -170,24 +181,35 @@ fn run_stage2(unctool: CmdUncTool) -> ! {
             let path = cmd_remote_path.local_path;
             let path_type = cmd_remote_path.path_type;
 
-            // TODO ?????????
-            if !Path::new(&path).exists() {
-                print_error(path, "Path does not exist or access denied".into());
-                exit(1);
-            }
-
-            let abs_path = match abspath(&path) {
-                Some(res) => res,
-                None => {
-                    print_error(path, "Failed to get an absolute path".into());
-                    exit(1);
+            let init_context: stage2::InitContext = {
+                if Path::new(&path).exists() {
+                    if let Some(abs_path) = abspath(&path) {
+                        match unctool::remote_path(&abs_path, path_type.into()) {
+                            Ok(val) => stage2::InitContext {
+                                is_success: true,
+                                text_value: val,
+                                ui_settings: ui_settings,
+                            },
+                            Err(e) => stage2::InitContext {
+                                is_success: false,
+                                text_value: format_error(path, e.to_string().as_str()),
+                                ui_settings: ui_settings,
+                            },
+                        }
+                    } else {
+                        stage2::InitContext {
+                            is_success: false,
+                            text_value: format_error(path, "Path does not exist or access denied"),
+                            ui_settings: ui_settings,
+                        }
+                    }
+                } else {
+                    stage2::InitContext {
+                        is_success: false,
+                        text_value: format_error(path, "Path does not exist or access denied"),
+                        ui_settings: ui_settings,
+                    }
                 }
-            };
-
-            let result = unctool::remote_path(&abs_path, path_type.into());
-            let init_context = InitContext {
-                scale_factor: unctool.ui_scale,
-                ..process_unctool_result(result)
             };
 
             handle_app_exit(stage2::run(init_context));
