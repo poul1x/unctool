@@ -1,4 +1,4 @@
-//! # [unctool-cli](https://github.com/poul1x/unctool)
+//! # [unctool-gui](https://github.com/poul1x/unctool)
 //!
 //! A CLI tool to seamlessly convert between Linux and Windows UNC paths.
 //! It can convert local Linux path to Windows/Linux UNC and vice versa.
@@ -7,33 +7,6 @@
 //!
 //! Convert between Linux and Windows UNC:
 //!
-//! ```bash
-//! unctool convert 'smb://mynas.local/some/path' -t windows
-//! # \\mynas.local\some\path
-//!
-//! unctool convert '\\mynas.local\some\path' -t linux
-//! # smb://mynas.local/some/path
-//! ```
-//!
-//! Convert to remote UNC:
-//!
-//! ```bash
-//! unctool remote-path /mnt/mynas.local/some/path -t windows
-//! # \\mynas.local\some\path
-//!
-//! unctool remote-path /mnt/mynas.local/some/path -t linux
-//! # smb://mynas.local/some/path
-//! ```
-//!
-//! Convert from remote UNC:
-//!
-//! ```bash
-//! unctool local-path '\\mynas.local\some\path'
-//! # /mnt/mynas.local/some/path
-//!
-//! unctool local-path 'smb://mynas.local/some/path'
-//! # /mnt/mynas.local/some/path
-//! ```
 
 use argh::{FromArgValue, FromArgs};
 use std::path::Path;
@@ -41,7 +14,7 @@ use std::process::exit;
 
 use unctool;
 
-use crate::app_result::InitContext;
+use crate::stage2::InitContext;
 mod stage1;
 mod stage2;
 
@@ -88,13 +61,7 @@ enum CmdUncToolSub {
     LocalPath(CmdLocalPath),
     RemotePath(CmdRemotePath),
     Convert(CmdConvert),
-    Version(CmdVersion),
 }
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Show current version and exit
-#[argh(subcommand, name = "version")]
-struct CmdVersion {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Convert remote Windows/Linux UNC path to local Linux filesystem path
@@ -141,13 +108,10 @@ fn abspath(p: &str) -> Option<String> {
     canonical_path.into_os_string().into_string().ok()
 }
 
-fn run_stage1(unctool: CmdUncTool) -> ! {
-    let init_context = stage1::InitContext {
-        scale_factor: unctool.ui_scale,
-    };
-
-    match stage1::run(init_context) {
+fn handle_app_exit(result: iced::Result) -> ! {
+    match result {
         Ok(_) => {
+            println!("Notmal exit");
             exit(0);
         }
         Err(e) => {
@@ -157,26 +121,29 @@ fn run_stage1(unctool: CmdUncTool) -> ! {
     }
 }
 
-fn process_result(result: unctool::Result<String>) -> app_result::InitContext {
+fn run_stage1(unctool: CmdUncTool) -> ! {
+    let init_context = stage1::InitContext {
+        scale_factor: unctool.ui_scale,
+    };
+
+    handle_app_exit(stage1::run(init_context));
+}
+
+fn process_unctool_result(result: unctool::Result<String>) -> stage2::InitContext {
     let (is_success, text_value) = match result {
         unctool::Result::Ok(value) => (true, value.clone()),
         unctool::Result::Err(err) => (false, err.to_string()),
     };
 
-    app_result::InitContext {
+    stage2::InitContext {
         is_success: is_success,
         text_value: text_value,
-        scale_factor: 1.0,
+        ..Default::default()
     }
 }
 
 fn run_stage2(unctool: CmdUncTool) -> ! {
     match unctool.subcommand.unwrap() {
-        CmdUncToolSub::Version(_) => {
-            println!("unctool-gui {}", env!("CARGO_PKG_VERSION"));
-            println!("unctool {}", unctool::version());
-            exit(0);
-        }
         CmdUncToolSub::Convert(cmd_convert) => {
             let path = cmd_convert.path;
             let path_type = cmd_convert.path_type;
@@ -184,36 +151,26 @@ fn run_stage2(unctool: CmdUncTool) -> ! {
             let result = unctool::convert_unc(&path, path_type.into());
             let init_context = InitContext {
                 scale_factor: unctool.ui_scale,
-                ..process_result(result)
+                ..process_unctool_result(result)
             };
 
-            match app_result::run(init_context) {
-                Ok(_) => {
-                    exit(0);
-                }
-                Err(e) => {
-                    eprintln!("Failed to run app");
-                    exit(1);
-                }
-            }
+            handle_app_exit(stage2::run(init_context));
         }
         CmdUncToolSub::LocalPath(cmd_local_path) => {
             let path = cmd_local_path.remote_path;
-            match unctool::local_path(&path) {
-                Ok(s) => {
-                    println!("{}", s);
-                    exit(0);
-                }
-                Err(e) => {
-                    print_error(path, e.to_string());
-                    exit(1);
-                }
-            }
+            let result = unctool::local_path(&path);
+            let init_context = InitContext {
+                scale_factor: unctool.ui_scale,
+                ..process_unctool_result(result)
+            };
+
+            handle_app_exit(stage2::run(init_context));
         }
         CmdUncToolSub::RemotePath(cmd_remote_path) => {
             let path = cmd_remote_path.local_path;
             let path_type = cmd_remote_path.path_type;
 
+            // TODO ?????????
             if !Path::new(&path).exists() {
                 print_error(path, "Path does not exist or access denied".into());
                 exit(1);
@@ -227,16 +184,13 @@ fn run_stage2(unctool: CmdUncTool) -> ! {
                 }
             };
 
-            match unctool::remote_path(&abs_path, path_type.into()) {
-                Ok(s) => {
-                    println!("{}", s);
-                    exit(0);
-                }
-                Err(e) => {
-                    print_error(path, e.to_string());
-                    exit(1);
-                }
-            }
+            let result = unctool::remote_path(&abs_path, path_type.into());
+            let init_context = InitContext {
+                scale_factor: unctool.ui_scale,
+                ..process_unctool_result(result)
+            };
+
+            handle_app_exit(stage2::run(init_context));
         }
     }
 }

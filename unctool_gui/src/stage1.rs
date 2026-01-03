@@ -18,9 +18,16 @@ pub struct InitContext {
     pub scale_factor: f32,
 }
 
+impl Default for InitContext {
+    fn default() -> Self {
+        InitContext {
+            scale_factor: 1.0,
+        }
+    }
+}
+
 pub fn run(init_context: InitContext) -> iced::Result {
     iced::application(move || App::new(init_context.clone()), App::update, App::view)
-        // .subscription(App::subscription)
         .scale_factor(App::scale_factor)
         .window_size((400, 200))
         .title(App::title)
@@ -89,7 +96,7 @@ impl std::fmt::Display for CommandName {
 
 impl App {
     fn title(&self) -> String {
-        String::from("UNCTool")
+        format!("UNC Tool {}", env!("CARGO_PKG_VERSION"))
     }
 
     fn scale_factor(&self) -> f32 {

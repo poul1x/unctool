@@ -16,15 +16,25 @@ use iced::widget::{column, row};
 use std::time::{Duration, Instant};
 use unctool;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InitContext {
     pub is_success: bool,
     pub text_value: String,
     pub scale_factor: f32,
 }
 
+impl Default for InitContext {
+    fn default() -> Self {
+        InitContext {
+            is_success: false,
+            text_value: String::new(),
+            scale_factor: 1.0,
+        }
+    }
+}
+
 pub fn run(init_context: InitContext) -> iced::Result {
-    iced::application(move || App::new(&init_context), App::update, App::view)
+    iced::application(move || App::new(init_context.clone()), App::update, App::view)
         .subscription(App::subscription)
         .scale_factor(App::scale_factor)
         .window_size((300, 120))
@@ -83,18 +93,18 @@ struct App {
 
 impl App {
     fn title(&self) -> String {
-        String::from("UNC Tool")
+        format!("UNC Tool {}", env!("CARGO_PKG_VERSION"))
     }
 
     fn scale_factor(&self) -> f32 {
         self.scale_factor
     }
 
-    fn new(init_context: &InitContext) -> (Self, Task<Message>) {
+    fn new(init_context: InitContext) -> (Self, Task<Message>) {
         (
             App {
                 is_success: init_context.is_success,
-                text_value: init_context.text_value.clone(),
+                text_value: init_context.text_value,
                 scale_factor: init_context.scale_factor,
                 copy_button_state: CopyButtonState::Enabled,
                 font_size: FontSize::default(),
