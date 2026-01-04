@@ -2,6 +2,8 @@
 
 Seamlessly convert between Linux and Windows UNC paths. Convert local Linux path to Windows/Linux UNC and vice versa.
 
+[](assets/unctool-cli.gif)
+
 ## Usage
 
 Convert between Linux and Windows UNC:
@@ -34,16 +36,50 @@ unctool local-path 'smb://mynas.local/some/path'
 # /mnt/mynas.local/some/path
 ```
 
-## How it works
+## UNC Tool GUI
 
-UNC Tool reads `/proc/mounts`, filters CIFS mounts, and performs local/remote path substitutions. Conversion between Windows and Linux UNC paths handles OS separator replacement.
+Run without arguments to open input window:
+
+```bash
+unctool-gui
+```
+
+Or use unctool-like CLI interface to go straight to results in GUI:
+
+```bash
+unctool-gui <command> [-t windows|linux]
+```
+
+[](assets/unctool-gui.gif)
 
 ## Installation
 
-### Linux 64-bit:
+### Using Cargo
+
+Install unctool CLI:
 
 ```bash
-curl -sL -o unctool https://github.com/poul1x/unctool/releases/latest/download/unctool-x86_64
+cargo install unctool-cli
+```
+
+Install unctool GUI:
+
+```bash
+cargo install unctool-gui
+```
+
+Install unctool library:
+
+```bash
+cargo install unctool
+```
+
+### From GitHub releases
+
+Install unctool CLI:
+
+```bash
+curl -sL -o unctool https://github.com/poul1x/unctool/releases/latest/download/unctool-cli-x64
 chmod +x unctool
 sudo mv unctool /usr/local/bin
 
@@ -51,15 +87,15 @@ sudo mv unctool /usr/local/bin
 unctool --help
 ```
 
-### Linux 32-bit:
+Install unctool GUI:
 
 ```bash
-curl -sL -o unctool https://github.com/poul1x/unctool/releases/latest/download/unctool-i686
-chmod +x unctool
-sudo mv unctool /usr/local/bin
+curl -sL -o unctool-gui https://github.com/poul1x/unctool/releases/latest/download/unctool-gui-x64
+chmod +x unctool-gui
+sudo mv unctool-gui /usr/local/bin
 
 # Test run
-unctool --help
+unctool-gui --help
 ```
 
 ## Build from sources
@@ -72,26 +108,28 @@ cd unctool
 
 rustup target add x86_64-unknown-linux-musl
 cargo build --release --target x86_64-unknown-linux-musl
-
 cp ./target/x86_64-unknown-linux-musl/release/unctool-cli unctool-cli
-strip --strip-all ./unctool-cli
+cp ./target/x86_64-unknown-linux-musl/release/unctool-gui unctool-gui
 
-# Test run
+# Test runs
 ./unctool-cli --help
+./unctool-gui --help
 ```
 
-### Linux 32-bit:
+## Integrate with your File Manager
 
-```bash
-git clone https://github.com/poul1x/unctool.git
-cd unctool
+Unctool can be integrated into a file manager. I tested it only with **double commander** and **vifm**, but other file managers would work too.
 
-rustup target add i686-unknown-linux-musl
-cargo build --release --target i686-unknown-linux-musl
+### Double Commander
 
-cp ./target/i686-unknown-linux-musl/release/unctool-cli unctool-cli
-strip --strip-all ./unctool-cli
+1. Open **Configuration → Options**
+1. Go to **Toolbar** and insert new button
+2. Configure:
+   - **Button type**: `External command`
+   - **Command**: `unctool-gui`
+   - **Parameters**: `remote-path %fs -t windows`
+3. Apply (Press `OK`)
 
-# Test run
-./unctool-cli --help
-```
+Now you can select any file in a mounted network share and get its Windows UNC path with one click!
+
+[](/assets/unctool-gui-fm.gif)
