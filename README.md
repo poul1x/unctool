@@ -2,7 +2,7 @@
 
 Seamlessly convert between Linux and Windows UNC paths. Convert local Linux path to Windows/Linux UNC and vice versa.
 
-[](assets/unctool-cli.gif)
+![](assets/unctool-cli.gif)
 
 ## Usage
 
@@ -50,7 +50,7 @@ Or use unctool-like CLI interface to go straight to results in GUI:
 unctool-gui <command> [-t windows|linux]
 ```
 
-[](assets/unctool-gui.gif)
+![](assets/unctool-gui.gif)
 
 ## Installation
 
@@ -132,4 +132,4 @@ Unctool can be integrated into a file manager. I tested it only with **double co
 
 Now you can select any file in a mounted network share and get its Windows UNC path with one click!
 
-[](/assets/unctool-gui-fm.gif)
+![](/assets/unctool-gui-fm.gif)
