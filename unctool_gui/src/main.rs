@@ -1,12 +1,53 @@
 //! # [unctool-gui](https://github.com/poul1x/unctool)
 //!
-//! A CLI tool to seamlessly convert between Linux and Windows UNC paths.
+//! A GUI tool to seamlessly convert between Linux and Windows UNC paths.
 //! It can convert local Linux path to Windows/Linux UNC and vice versa.
 //!
 //! # Usage
 //!
+//! Run without arguments to open input window:
+//!
+//! ```bash
+//! unctool-gui
+//! ```
+//!
+//! Or use unctool-like CLI interface to go straight to results in GUI:
+//!
+//! ```bash
+//! unctool-gui <command> [-t windows|linux]
+//! ```
+//!
+//! # Examples
+//!
 //! Convert between Linux and Windows UNC:
 //!
+//! ```bash
+//! unctool-gui convert 'smb://mynas.local/some/path' -t windows
+//! # \\mynas.local\some\path
+//!
+//! unctool-gui convert '\\mynas.local\some\path' -t linux
+//! # smb://mynas.local/some/path
+//! ```
+//!
+//! Convert to remote UNC:
+//!
+//! ```bash
+//! unctool-gui remote-path /mnt/mynas.local/some/path -t windows
+//! # \\mynas.local\some\path
+//!
+//! unctool-gui remote-path /mnt/mynas.local/some/path -t linux
+//! # smb://mynas.local/some/path
+//! ```
+//!
+//! Convert from remote UNC:
+//!
+//! ```bash
+//! unctool-gui local-path '\\mynas.local\some\path'
+//! # /mnt/mynas.local/some/path
+//!
+//! unctool-gui local-path 'smb://mynas.local/some/path'
+//! # /mnt/mynas.local/some/path
+//! ```
 
 use argh::{FromArgValue, FromArgs};
 use std::path::Path;
