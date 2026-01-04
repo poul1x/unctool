@@ -118,7 +118,7 @@ cp ./target/x86_64-unknown-linux-musl/release/unctool-gui unctool-gui
 
 ## Integrate with your File Manager
 
-Unctool can be integrated into a file manager. I tested it only with **double commander** and **vifm**, but other file managers would work too.
+Unctool can be integrated into a file manager. I tested it only with **double commander** and **vifm**, but other file managers should work too.
 
 ### Double Commander
 
