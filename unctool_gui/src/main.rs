@@ -11,14 +11,10 @@
 use argh::{FromArgValue, FromArgs};
 use std::path::Path;
 use std::process::exit;
-
 use unctool;
 
 mod app_submit;
 mod app_results;
-
-// use crate::stage1;
-// use crate::stage2;
 
 #[derive(Debug, PartialEq)]
 pub enum PathType {
@@ -53,7 +49,7 @@ struct CmdUncTool {
     #[argh(subcommand)]
     subcommand: Option<CmdUncToolSub>,
     #[argh(option, default = "1.0")]
-    /// aaa !!!!!!!!
+    /// the UI scaling factor, value of 1.0 represents 100% scaling (default)
     ui_scale: f32,
 }
 
@@ -118,7 +114,7 @@ fn handle_app_exit(result: iced::Result) -> ! {
     }
 }
 
-fn run_stage1(unctool: CmdUncTool) -> ! {
+fn run_app_submit(unctool: CmdUncTool) -> ! {
     let init_context = app_submit::InitContext {
         ui_settings: app_submit::UISettings {
             scale_factor: unctool.ui_scale,
@@ -132,7 +128,7 @@ fn format_error(path: String, err_msg: &str) -> String {
     format!("{}. Path: '{}'", err_msg, path)
 }
 
-fn run_stage2(unctool: CmdUncTool) -> ! {
+fn run_app_results(unctool: CmdUncTool) -> ! {
     let ui_settings = app_results::UISettings {
         scale_factor: unctool.ui_scale,
     };
@@ -217,8 +213,8 @@ fn run_stage2(unctool: CmdUncTool) -> ! {
 fn main() -> ! {
     let unctool: CmdUncTool = argh::from_env();
     if unctool.subcommand.is_none() {
-        run_stage1(unctool);
+        run_app_submit(unctool);
     } else {
-        run_stage2(unctool);
+        run_app_results(unctool);
     }
 }
