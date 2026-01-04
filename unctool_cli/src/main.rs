@@ -192,7 +192,7 @@ fn main() {
                     exit(0);
                 }
                 Err(e) => {
-                    print_error(path, e.to_string());
+                    print_error(abs_path, e.to_string());
                     exit(1);
                 }
             }
