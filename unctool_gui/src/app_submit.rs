@@ -250,7 +250,9 @@ impl App {
 
         let args: Vec<String> = env::args().collect();
         let mut binding = Command::new(args[0].clone());
-        let cmd = binding.arg(command).arg(self.path.clone());
+        let cmd = binding.arg("--ui-scale").arg(self.scale_factor.to_string());
+        let cmd = cmd.arg(command).arg(self.path.clone());
+
         let final_cmd = match self.command.unwrap() {
             CommandName::LocalPath => cmd,
             _ => cmd.arg("-t").arg(fn_target_os()),
