@@ -102,6 +102,8 @@ unctool-gui --help
 
 ### Linux 64-bit:
 
+UNC Tool CLI:
+
 ```bash
 git clone https://github.com/poul1x/unctool.git
 cd unctool
@@ -109,10 +111,24 @@ cd unctool
 rustup target add x86_64-unknown-linux-musl
 cargo build --release --target x86_64-unknown-linux-musl
 cp ./target/x86_64-unknown-linux-musl/release/unctool-cli unctool-cli
-cp ./target/x86_64-unknown-linux-musl/release/unctool-gui unctool-gui
+chmod +x ./unctool-cli
 
-# Test runs
+# Test run
 ./unctool-cli --help
+```
+
+UNC Tool GUI:
+
+```bash
+git clone https://github.com/poul1x/unctool.git
+cd unctool
+
+rustup target add x86_64-unknown-linux-gnu
+cargo build --release --target x86_64-unknown-linux-gnu
+cp ./target/x86_64-unknown-linux-gnu/release/unctool-gui unctool-gui
+chmod +x ./unctool-gui
+
+# Test run
 ./unctool-gui --help
 ```
 
