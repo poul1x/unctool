@@ -1,6 +1,6 @@
 [package]
 name = "unctool-gui"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 description = "A GUI program to convert between Linux and Windows UNC paths. Converts local Linux path to Windows/Linux UNC and vice versa."
